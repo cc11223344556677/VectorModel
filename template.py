@@ -7,49 +7,50 @@ from pathlib import Path
 import numpy as np
 from vector_model import *
 from analysis import *
-from agent_profiles import *
 
 AGENT_TYPE = 'test'
 
-N_DIMS = 4             
-N_DYN_VECS = 5         
-N_PERS_VECS = 0     
+N_DIMS = 2             
+N_DYN_VECS = 3          
+N_PERS_VECS = 0          
 
 N_STATIC_TOPICS = 1 
-N_DYNAMIC_TOPICS = 5
+N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
-N_AGENTS = 100
+N_AGENTS = 50
 
 OPINION_ASSIMILATIVE_METHOD = 'closest',
 VECTOR_ASSIMILATIVE_METHOD = 'closest',
 OPINION_REPULSIVE_METHOD = 'furthest',
 VECTOR_REPULSTIVE_METHOD = 'furthest',
 
-EPSILON_T_OP = 0.2
-EPSILON_R_OP = 0.1
-EPSILON_T_VEC = 0.2
-EPSILON_R_VEC = 0.1
-LAMBDA_PARAM = 0.5
+EPSILON_T_OP = 0.1
+EPSILON_R_OP = 0.2
+EPSILON_T_VEC = 0.1
+EPSILON_R_VEC = 0.2
+LAMBDA_PARAM = 0.1
 
-MESSAGE_RATE = 1.0
+MESSAGE_RATE = 1.5  
 MAX_TARGETS = 4          
 
-N_STEPS = 250
+N_STEPS = 500
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
-MAX_MESSAGES_SELECTED = 20
+SELECTOR_METHODS = ['select_randomly']
+MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
 
 N_MAX_MESSAGES = 4
+PRODUCER_METHODS: List[MessageProducer.PRODUCER_METHODS] = ['opinionated']
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 42
+SEED = 1
 
-DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=5, n_messages_to_show=3)
+DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=1, n_messages_to_show=3)
 
 rng = np.random.default_rng(SEED)
 
@@ -88,59 +89,6 @@ model = VectorModel(
     data_collector=DATA_COLLECTOR,
 )
 
-N_STRATEGIC_AGENTS = 10
-for _ in range(N_STRATEGIC_AGENTS):
-    strategic_agent = create_strategic_agent(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng,
-                  only_create_extremists=True
-                  )
-    model.agents.add(strategic_agent)
-
-N_LURKERS = 80
-for _ in range(N_LURKERS):
-    lurker = create_lurker(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng
-                  )
-    model.agents.add(lurker)
-    
-N_COMMENTERS = 10
-for _ in range(N_COMMENTERS):
-    commenter = create_commenter(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng
-                  )
-    model.agents.add(commenter)
-    
-"""
 for i in range(N_AGENTS):
     message_selector = MessageSelector(
         methods=SELECTOR_METHODS,
@@ -175,7 +123,6 @@ for i in range(N_AGENTS):
         rng=rng
     )
     model.agents.add(agent)
-"""
 
 
 
@@ -189,31 +136,11 @@ print(f"  Steps: {N_STEPS}")
 print(f"  Debug level: {DEBUG_LEVEL}")
 print(f"  Seed: {SEED}")
 
-# Run the model
 model.run(N_STEPS)
 
 print("\n" + "="*80)
 print("SIMULATION COMPLETE")
 print("="*80)
-
-
-
-if DEBUG_LEVEL != 'none':
-    print(f"\nCollected debug data for {len(model.data_collector.step_data)} steps")
-    
-    agent_num = 2
-    agent_opinions = []
-    for step_data in model.data_collector.step_data:
-        for agent_data in step_data:    
-            if agent_data.agent_id == agent_num:
-                agent_opinions.append(agent_data.opinions_after)
-                break
-    
-    if agent_opinions:
-        print(f"\nAgent {agent_num} opinion trajectory on topic 0:")
-        for step, opinions in enumerate(agent_opinions):
-            if opinions:
-                print(f"  Step {step}: {opinions[0][1]:+.4f}")
                 
 bipolarization = calculate_bipolarization(model, 0)
 print(f'FINAL BIPOLALIZATION: {bipolarization}')

@@ -5,51 +5,42 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from pathlib import Path
 
 import numpy as np
-from vector_model import *
+from  vector_model import *
 from analysis import *
-from agent_profiles import *
 
-AGENT_TYPE = 'test'
-
-N_DIMS = 4             
-N_DYN_VECS = 5         
-N_PERS_VECS = 0     
+N_DIMS = 2             
+N_DYN_VECS = 3          
+N_PERS_VECS = 0          
 
 N_STATIC_TOPICS = 1 
-N_DYNAMIC_TOPICS = 5
+N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
-N_AGENTS = 100
+N_AGENTS = 50
 
-OPINION_ASSIMILATIVE_METHOD = 'closest',
-VECTOR_ASSIMILATIVE_METHOD = 'closest',
-OPINION_REPULSIVE_METHOD = 'furthest',
-VECTOR_REPULSTIVE_METHOD = 'furthest',
+EPSILON_T_OP = 0.1
+EPSILON_R_OP = 0.9
+EPSILON_T_VEC = 0.1
+EPSILON_R_VEC = 0.9
+LAMBDA_PARAM = 0.1
 
-EPSILON_T_OP = 0.2
-EPSILON_R_OP = 0.1
-EPSILON_T_VEC = 0.2
-EPSILON_R_VEC = 0.1
-LAMBDA_PARAM = 0.5
-
-MESSAGE_RATE = 1.0
+MESSAGE_RATE = 1.5  
 MAX_TARGETS = 4          
 
-N_STEPS = 250
+N_STEPS = 500
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
-MAX_MESSAGES_SELECTED = 20
+SELECTOR_METHODS = ['select_randomly']
+MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
 
-N_MAX_MESSAGES = 4
+PRODUCER_METHODS: List[MessageProducer.PRODUCER_METHODS] = ['opinionated']
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 42
-
-DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=5, n_messages_to_show=3)
+SEED = 1
 
 rng = np.random.default_rng(SEED)
 
@@ -65,10 +56,10 @@ topic_space = TopicSpace(
 opinion_updater = OpinionUpdater(
     n_dims=N_DIMS,
     n_vecs=N_DYN_VECS,
-    opinion_assimilative_method=OPINION_ASSIMILATIVE_METHOD,
-    vector_assimilative_method=VECTOR_ASSIMILATIVE_METHOD,
-    opinion_repulsive_method=OPINION_REPULSIVE_METHOD,
-    vector_repulsive_method=VECTOR_REPULSTIVE_METHOD,
+    opinion_assimilative_method='closest',
+    vector_assimilative_method='closest',
+    opinion_repulsive_method='furthest',
+    vector_repulsive_method='furthest',
     similarity_method=SIMILARITY_METHOD,
     epsilon_T_op=EPSILON_T_OP,
     epsilon_R_op=EPSILON_R_OP,
@@ -85,62 +76,9 @@ model = VectorModel(
     n_dyn_vecs=N_DYN_VECS,
     n_pers_vecs=N_PERS_VECS,
     similarity_method=SIMILARITY_METHOD,
-    data_collector=DATA_COLLECTOR,
+    data_collector=DataCollector('detailed', n_agents_to_track=1, n_messages_to_show=3),
 )
 
-N_STRATEGIC_AGENTS = 10
-for _ in range(N_STRATEGIC_AGENTS):
-    strategic_agent = create_strategic_agent(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng,
-                  only_create_extremists=True
-                  )
-    model.agents.add(strategic_agent)
-
-N_LURKERS = 80
-for _ in range(N_LURKERS):
-    lurker = create_lurker(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng
-                  )
-    model.agents.add(lurker)
-    
-N_COMMENTERS = 10
-for _ in range(N_COMMENTERS):
-    commenter = create_commenter(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng
-                  )
-    model.agents.add(commenter)
-    
-"""
 for i in range(N_AGENTS):
     message_selector = MessageSelector(
         methods=SELECTOR_METHODS,
@@ -156,7 +94,7 @@ for i in range(N_AGENTS):
         similarity_method=SIMILARITY_METHOD,
         message_rate=MESSAGE_RATE,
         max_targets=MAX_TARGETS,
-        n_max_messages=N_MAX_MESSAGES,
+        n_max_messages=1,
         rng=rng,
         include_opinions=True,
         include_dyn_vecs=True,
@@ -171,11 +109,11 @@ for i in range(N_AGENTS):
         message_selector=message_selector,
         message_producer=message_producer,
         similarity_method=SIMILARITY_METHOD,
-        agent_type=AGENT_TYPE,
+        agent_type='test',
         rng=rng
+        #rng=np.random.default_rng(seed=rng.integers(0, 1000, 1))
     )
     model.agents.add(agent)
-"""
 
 
 

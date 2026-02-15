@@ -13,7 +13,7 @@ AGENT_TYPE = 'test'
 
 N_DIMS = 4             
 N_DYN_VECS = 5         
-N_PERS_VECS = 0     
+N_PERS_VECS = 1          
 
 N_STATIC_TOPICS = 1 
 N_DYNAMIC_TOPICS = 5
@@ -27,16 +27,16 @@ VECTOR_ASSIMILATIVE_METHOD = 'closest',
 OPINION_REPULSIVE_METHOD = 'furthest',
 VECTOR_REPULSTIVE_METHOD = 'furthest',
 
-EPSILON_T_OP = 0.2
-EPSILON_R_OP = 0.1
-EPSILON_T_VEC = 0.2
-EPSILON_R_VEC = 0.1
-LAMBDA_PARAM = 0.5
+EPSILON_T_OP = 0.1
+EPSILON_R_OP = 0.2
+EPSILON_T_VEC = 0.1
+EPSILON_R_VEC = 0.2
+LAMBDA_PARAM = 1.0
 
 MESSAGE_RATE = 1.0
 MAX_TARGETS = 4          
 
-N_STEPS = 250
+N_STEPS = 100
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
 MAX_MESSAGES_SELECTED = 20
@@ -47,7 +47,7 @@ N_MAX_MESSAGES = 4
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 42
+SEED = 1
 
 DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=5, n_messages_to_show=3)
 
@@ -106,7 +106,7 @@ for _ in range(N_STRATEGIC_AGENTS):
                   )
     model.agents.add(strategic_agent)
 
-N_LURKERS = 80
+N_LURKERS = 90
 for _ in range(N_LURKERS):
     lurker = create_lurker(model,
                   N_DIMS,
@@ -122,23 +122,6 @@ for _ in range(N_LURKERS):
                   rng
                   )
     model.agents.add(lurker)
-    
-N_COMMENTERS = 10
-for _ in range(N_COMMENTERS):
-    commenter = create_commenter(model,
-                  N_DIMS,
-                  N_DYN_VECS,
-                  N_PERS_VECS,
-                  SIMILARITY_METHOD,
-                  OPINION_SIMILARITY_THRESHOLD,
-                  VECTOR_SIMILARITY_THRESHOLD,
-                  MAX_MESSAGES_SELECTED,
-                  MESSAGE_RATE,
-                  MAX_TARGETS,
-                  N_MAX_MESSAGES,
-                  rng
-                  )
-    model.agents.add(commenter)
     
 """
 for i in range(N_AGENTS):

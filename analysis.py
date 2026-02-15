@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
 from typing import List, Literal
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from typing import Dict, Optional
+import numpy as np
 
 DEBUG_LEVELS = Literal['none', 'summary', 'agent_stats', 'detailed']
 
 @dataclass
 class AgentData:
-    """Stores debug information for a single agent at a single timestep"""
     step: int
     agent_id: int
     agent_type: str
@@ -14,8 +17,8 @@ class AgentData:
     messages_sent: List = field(default_factory=list)
     opinions_before: List[tuple[int, float]] = field(default_factory=list)
     opinions_after: List[tuple[int, float]] = field(default_factory=list)
-    att_vecs_before: List[np.ndarray] = field(default_factory=list)
-    att_vecs_after: List[np.ndarray] = field(default_factory=list)
+    dyn_vecs_before: List[np.ndarray] = field(default_factory=list)
+    dyn_vecs_after: List[np.ndarray] = field(default_factory=list)
 
 
 class DataCollector:
@@ -50,8 +53,8 @@ class DataCollector:
                     messages_sent: List,
                     opinions_before: List[tuple[int, float]],
                     opinions_after: List[tuple[int, float]],
-                    att_vecs_before: List[np.ndarray],
-                    att_vecs_after: List[np.ndarray]):
+                    dyn_vecs_before: List[np.ndarray],
+                    dyn_vecs_after: List[np.ndarray]):
         data = AgentData(
             step=self.current_step,
             agent_id=agent_id,
@@ -60,8 +63,8 @@ class DataCollector:
             messages_sent=messages_sent[:],
             opinions_before=opinions_before[:],
             opinions_after=opinions_after[:],
-            att_vecs_before=[v.copy() for v in att_vecs_before],
-            att_vecs_after=[v.copy() for v in att_vecs_after]
+            dyn_vecs_before=[v.copy() for v in dyn_vecs_before],
+            dyn_vecs_after=[v.copy() for v in dyn_vecs_after]
         )
         self.current_step_data.append(data)
         
@@ -118,8 +121,8 @@ class DataCollector:
                 print(f"    [{i}] From Agent {msg.sender_id}:")
                 if msg.opinions:
                     print(f"        Opinions: {[(tid, f'{op:+.3f}') for tid, op in msg.opinions[:3]]}")
-                if msg.att_vecs:
-                    print(f"        Att vecs: {len(msg.att_vecs)} vectors")
+                if msg.dyn_vecs:
+                    print(f"        Dyn vecs: {len(msg.dyn_vecs)} vectors")
                 if msg.pers_vecs:
                     print(f"        Pers vecs: {len(msg.pers_vecs)} vectors")
                 if msg.target_ids:
@@ -133,18 +136,13 @@ class DataCollector:
                 if msg.target_ids:
                     print(f"        Targets: {msg.target_ids}")
             
-            print(f"\n  Attitude Vector Changes:")
-            for i, (vec_before, vec_after) in enumerate(zip(data.att_vecs_before, data.att_vecs_after)):
+            print(f"\n  Dynamic Vector Changes:")
+            for i, (vec_before, vec_after) in enumerate(zip(data.dyn_vecs_before, data.dyn_vecs_after)):
                 if not np.allclose(vec_before, vec_after):
                     change_magnitude = np.linalg.norm(vec_after - vec_before)
                     print(f"    Vec {i}: change magnitude = {change_magnitude:.4f}")
                     print(f"      Before: {vec_before[:3]}")
-                    print(f"      After:  {vec_after[:3]}")
-                    
-import matplotlib.pyplot as plt
-from typing import Dict, Optional
-import numpy as np
-from matplotlib.lines import Line2D
+                    print(f"      After:  {vec_after[:3]}")           
 
 def plot_opinion_trajectories(
     data_collector: DataCollector,
@@ -180,7 +178,7 @@ def plot_opinion_trajectories(
             agent_trajectories[agent_id]['opinions'].append(opinion_value)
     
     agent_types = sorted(set(data['type'] for data in agent_trajectories.values()))
-    color_map = plt.cm.get_cmap('tab10', len(agent_types))
+    color_map = plt.cm.get_cmap('Set1', len(agent_types))
     type_to_color = {agent_type: color_map(i) for i, agent_type in enumerate(agent_types)}
     
     fig, ax = plt.subplots(figsize=figsize)
@@ -199,7 +197,6 @@ def plot_opinion_trajectories(
                    label=f'Agent {agent_id} ({agent_type})' if len(agent_trajectories) <= 20 else None)
     
     if len(agent_trajectories) > 20:
-        from matplotlib.lines import Line2D
         legend_elements = [Line2D([0], [0], color=type_to_color[agent_type], 
                                  linewidth=linewidth*1.5, label=agent_type)
                           for agent_type in agent_types]
@@ -328,5 +325,91 @@ def plot_all_topics(
     
     if show_plot:
         plt.show()
+    
+    return fig, axes
+
+def calculate_bipolarization(model, topic_id=0):
+    topic = model.topic_space.get_topic(topic_id)
+    opinions = [agent.calculate_opinion(topic) for agent in model.agents]
+    n = len(opinions)
+    
+    if n == 0:
+        return 0.0
+    
+    d_bar = 0
+    for i in range(n):
+        for j in range(n):
+            d_bar += abs(opinions[i] - opinions[j])
+    d_bar /= (n * n)
+    
+    P_t = 0
+    for i in range(n):
+        for j in range(n):
+            diff = abs(opinions[i] - opinions[j])
+            P_t += (diff - d_bar) ** 2
+    
+    P_t = 4 * P_t / (n * n)
+    return P_t
+
+def calculate_opinion_entropy(model, topic_id, num_bins=20):
+    topic = model.topic_space.get_topic(topic_id)
+    
+    opinions = []
+    for agent in model.agents:
+        opinion = agent.calculate_opinion(topic)
+        opinions.append(opinion)
+    
+    opinions = np.array(opinions)
+    
+    counts, _ = np.histogram(opinions, bins=num_bins, range=(0, 1))
+    
+    probabilities = counts[counts > 0] / len(opinions)
+    
+    entropy = -np.sum(probabilities * np.log2(probabilities))
+    
+    return entropy
+
+def plot_bipolarization_entropy_heatmaps(
+    bipolarization_matrix,
+    entropy_matrix,
+    param1_range,
+    param2_range,
+    param1_name,
+    param2_name
+):
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    
+    n_rows, n_cols = bipolarization_matrix.shape
+    
+    param1_labels = np.linspace(param1_range[0], param1_range[1], n_cols)
+    param2_labels = np.linspace(param2_range[0], param2_range[1], n_rows)
+    
+    im1 = axes[0].imshow(
+        bipolarization_matrix,
+        cmap='viridis',
+        aspect='auto',
+        origin='lower',
+        extent=[param1_range[0], param1_range[1], param2_range[0], param2_range[1]]
+    )
+    axes[0].set_xlabel(param1_name, fontsize=12)
+    axes[0].set_ylabel(param2_name, fontsize=12)
+    axes[0].set_title('Bipolarization', fontsize=14, fontweight='bold')
+    cbar1 = plt.colorbar(im1, ax=axes[0])
+    cbar1.set_label('Bipolarization', fontsize=11)
+    
+    im2 = axes[1].imshow(
+        entropy_matrix,
+        cmap='viridis',
+        aspect='auto',
+        origin='lower',
+        extent=[param1_range[0], param1_range[1], param2_range[0], param2_range[1]]
+    )
+    axes[1].set_xlabel(param1_name, fontsize=12)
+    axes[1].set_ylabel(param2_name, fontsize=12)
+    axes[1].set_title('Shannon Entropy', fontsize=14, fontweight='bold')
+    cbar2 = plt.colorbar(im2, ax=axes[1])
+    cbar2.set_label('Shannon Entropy', fontsize=11)
+    
+    plt.tight_layout()
     
     return fig, axes
