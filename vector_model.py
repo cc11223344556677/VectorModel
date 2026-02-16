@@ -9,13 +9,6 @@ import mesa
 import numpy as np
 from collections import deque
 
-# Import from the previous file (assuming it's named opinion_dynamics.py)
-# For this example, I'll assume all classes are importable
-# from opinion_dynamics import (
-#     Topic, TopicSpace, Message, MessageSelector, MessageProducer, OpinionUpdater,
-#     cosine_similarity, dimensionality_adjusted_similarity, SIMILARITY_METHODS
-# )
-
 SIMILARITY_METHODS = Literal['cosine', 'tanh']
 
 #scaled to 0 to 1
@@ -37,7 +30,6 @@ class Topic:
         self.activation = activation
         
     def age_topic(self, decay_rate: float = 0.95):
-        """Reduce activation as topic ages"""
         if not self.is_static:
             self.age += 1
             self.activation *= decay_rate

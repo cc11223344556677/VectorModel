@@ -139,45 +139,6 @@ for _ in range(N_COMMENTERS):
                   rng
                   )
     model.agents.add(commenter)
-    
-"""
-for i in range(N_AGENTS):
-    message_selector = MessageSelector(
-        methods=SELECTOR_METHODS,
-        similarity_method=SIMILARITY_METHOD,
-        opinion_similarity_threshold=OPINION_SIMILARITY_THRESHOLD,
-        vector_similarity_threshold=VECTOR_SIMILARITY_THRESHOLD,
-        max_messages_selected=MAX_MESSAGES_SELECTED,
-        rng=rng,
-    )
-
-    message_producer = MessageProducer(
-        methods=PRODUCER_METHODS,
-        similarity_method=SIMILARITY_METHOD,
-        message_rate=MESSAGE_RATE,
-        max_targets=MAX_TARGETS,
-        n_max_messages=N_MAX_MESSAGES,
-        rng=rng,
-        include_opinions=True,
-        include_dyn_vecs=True,
-        include_pers_vecs=True,
-    )
-    
-    agent = VectorAgent(
-        model=model,
-        n_dims=N_DIMS,
-        n_dyn_vecs=N_DYN_VECS,
-        n_pers_vecs=N_PERS_VECS,
-        message_selector=message_selector,
-        message_producer=message_producer,
-        similarity_method=SIMILARITY_METHOD,
-        agent_type=AGENT_TYPE,
-        rng=rng
-    )
-    model.agents.add(agent)
-"""
-
-
 
 print(f"Running vector opinion dynamics model")
 print(f"  Agents: {N_AGENTS}")
