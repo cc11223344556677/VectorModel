@@ -14,7 +14,7 @@ N_DIMS = 2
 N_DYN_VECS = 3          
 N_PERS_VECS = 0          
 
-N_STATIC_TOPICS = 1 
+N_STATIC_TOPICS = 1
 N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
@@ -157,8 +157,7 @@ plot_opinion_trajectories(
     save_path=output_path,
 )
 
-#plot_all_topics(
-#    model.data_collector,
-#    n_topics=N_STATIC_TOPICS + N_DYNAMIC_TOPICS
-#    )
+plot_all_topics(model.data_collector,
+                N_STATIC_TOPICS)
+
 # %%

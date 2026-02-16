@@ -230,37 +230,15 @@ def plot_all_topics(
     alpha: float = 0.6,
     linewidth: float = 1.0,
 ):
-    """
-    Plot opinion trajectories for all topics in a grid layout.
-    
-    Parameters:
-    -----------
-    data_collector : DataCollector
-        The data collector from the simulation
-    n_topics : int
-        Number of topics to plot
-    figsize : tuple
-        Figure size (width, height)
-    save_path : str, optional
-        If provided, save the plot to this path
-    show_plot : bool
-        Whether to display the plot
-    alpha : float
-        Transparency of the lines
-    linewidth : float
-        Width of the lines
-    """
     if not data_collector.step_data:
         print("No data collected!")
         return
     
-    # Determine grid layout
     n_cols = min(3, n_topics)
     n_rows = (n_topics + n_cols - 1) // n_cols
     
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
     
-    # Organize data by agent and topic
     agent_data_dict: Dict[int, Dict] = {}
     
     for step_idx, step_data in enumerate(data_collector.step_data):
@@ -273,17 +251,14 @@ def plot_all_topics(
                     'opinions_by_topic': {i: [] for i in range(n_topics)}
                 }
             
-            # Store opinions for all topics
             for tid, op in agent_data.opinions_after:
                 if tid < n_topics:
                     agent_data_dict[agent_id]['opinions_by_topic'][tid].append(op)
     
-    # Get unique agent types and assign colors
     agent_types = sorted(set(data['type'] for data in agent_data_dict.values()))
     color_map = plt.cm.get_cmap('tab10', len(agent_types))
     type_to_color = {agent_type: color_map(i) for i, agent_type in enumerate(agent_types)}
     
-    # Plot each topic
     for topic_id in range(n_topics):
         row = topic_id // n_cols
         col = topic_id % n_cols

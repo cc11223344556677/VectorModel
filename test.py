@@ -11,12 +11,12 @@ from agent_profiles import *
 
 AGENT_TYPE = 'test'
 
-N_DIMS = 4             
-N_DYN_VECS = 5         
-N_PERS_VECS = 0     
+N_DIMS = 4            
+N_DYN_VECS = 4         
+N_PERS_VECS = 4     
 
 N_STATIC_TOPICS = 1 
-N_DYNAMIC_TOPICS = 5
+N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
@@ -24,14 +24,14 @@ N_AGENTS = 100
 
 OPINION_ASSIMILATIVE_METHOD = 'closest',
 VECTOR_ASSIMILATIVE_METHOD = 'closest',
-OPINION_REPULSIVE_METHOD = 'furthest',
-VECTOR_REPULSTIVE_METHOD = 'furthest',
+OPINION_REPULSIVE_METHOD = 'matched',
+VECTOR_REPULSTIVE_METHOD = 'matched',
 
-EPSILON_T_OP = 0.2
-EPSILON_R_OP = 0.1
-EPSILON_T_VEC = 0.2
-EPSILON_R_VEC = 0.1
-LAMBDA_PARAM = 0.5
+EPSILON_T_OP = 0.4
+EPSILON_R_OP = 0.9
+EPSILON_T_VEC = 0.4
+EPSILON_R_VEC = 0.9
+LAMBDA_PARAM = 0.1
 
 MESSAGE_RATE = 1.0
 MAX_TARGETS = 4          
@@ -47,7 +47,7 @@ N_MAX_MESSAGES = 4
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 42
+SEED = 1000
 
 DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=5, n_messages_to_show=3)
 
@@ -88,7 +88,7 @@ model = VectorModel(
     data_collector=DATA_COLLECTOR,
 )
 
-N_STRATEGIC_AGENTS = 10
+N_STRATEGIC_AGENTS = 5
 for _ in range(N_STRATEGIC_AGENTS):
     strategic_agent = create_strategic_agent(model,
                   N_DIMS,
@@ -106,7 +106,7 @@ for _ in range(N_STRATEGIC_AGENTS):
                   )
     model.agents.add(strategic_agent)
 
-N_LURKERS = 80
+N_LURKERS = 40
 for _ in range(N_LURKERS):
     lurker = create_lurker(model,
                   N_DIMS,
@@ -123,7 +123,7 @@ for _ in range(N_LURKERS):
                   )
     model.agents.add(lurker)
     
-N_COMMENTERS = 10
+N_COMMENTERS = 5
 for _ in range(N_COMMENTERS):
     commenter = create_commenter(model,
                   N_DIMS,
