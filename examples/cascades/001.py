@@ -5,37 +5,30 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from pathlib import Path
 
 import numpy as np
-from vector_model import *
+from  vector_model import *
 from analysis import *
 
-AGENT_TYPE = 'test'
+N_DIMS = 3         
+N_DYN_VECS = 3         
+N_PERS_VECS = 0
 
-N_DIMS = 3            
-N_DYN_VECS = 3          
-N_PERS_VECS = 3          
-
-N_STATIC_TOPICS = 1
+N_STATIC_TOPICS = 3
 N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
 N_AGENTS = 50
 
-OPINION_ASSIMILATIVE_METHOD = 'closest',
-VECTOR_ASSIMILATIVE_METHOD = 'closest',
-OPINION_REPULSIVE_METHOD = 'furthest',
-VECTOR_REPULSTIVE_METHOD = 'furthest',
+EPSILON_T_OP = 0.2
+EPSILON_R_OP = 0.8
+EPSILON_T_VEC = 0.2
+EPSILON_R_VEC = 0.8
+LAMBDA_PARAM = 0.15
 
-EPSILON_T_OP = 0.1
-EPSILON_R_OP = 0.2
-EPSILON_T_VEC = 0.1
-EPSILON_R_VEC = 0.2
-LAMBDA_PARAM = 0.1
-
-MESSAGE_RATE = 1.5  
+MESSAGE_RATE = 1.0
 MAX_TARGETS = 4          
 
-N_STEPS = 500
+N_STEPS = 250
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
 SELECTOR_METHODS = ['select_randomly']
@@ -43,14 +36,11 @@ MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
 
-N_MAX_MESSAGES = 4
 PRODUCER_METHODS: List[MessageProducer.PRODUCER_METHODS] = ['opinionated']
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 1
-
-DATA_COLLECTOR = DataCollector('detailed', n_agents_to_track=1, n_messages_to_show=3)
+SEED = 4
 
 rng = np.random.default_rng(SEED)
 
@@ -66,10 +56,10 @@ topic_space = TopicSpace(
 opinion_updater = OpinionUpdater(
     n_dims=N_DIMS,
     n_vecs=N_DYN_VECS,
-    opinion_assimilative_method=OPINION_ASSIMILATIVE_METHOD,
-    vector_assimilative_method=VECTOR_ASSIMILATIVE_METHOD,
-    opinion_repulsive_method=OPINION_REPULSIVE_METHOD,
-    vector_repulsive_method=VECTOR_REPULSTIVE_METHOD,
+    opinion_assimilative_method='closest',
+    vector_assimilative_method='closest',
+    opinion_repulsive_method='furthest',
+    vector_repulsive_method='furthest',
     similarity_method=SIMILARITY_METHOD,
     epsilon_T_op=EPSILON_T_OP,
     epsilon_R_op=EPSILON_R_OP,
@@ -86,7 +76,7 @@ model = VectorModel(
     n_dyn_vecs=N_DYN_VECS,
     n_pers_vecs=N_PERS_VECS,
     similarity_method=SIMILARITY_METHOD,
-    data_collector=DATA_COLLECTOR,
+    data_collector=DataCollector('detailed', n_agents_to_track=1, n_messages_to_show=3),
 )
 
 for i in range(N_AGENTS):
@@ -104,7 +94,7 @@ for i in range(N_AGENTS):
         similarity_method=SIMILARITY_METHOD,
         message_rate=MESSAGE_RATE,
         max_targets=MAX_TARGETS,
-        n_max_messages=N_MAX_MESSAGES,
+        n_max_messages=1,
         rng=rng,
         include_opinions=True,
         include_dyn_vecs=True,
@@ -119,8 +109,9 @@ for i in range(N_AGENTS):
         message_selector=message_selector,
         message_producer=message_producer,
         similarity_method=SIMILARITY_METHOD,
-        agent_type=AGENT_TYPE,
+        agent_type='test',
         rng=rng
+        #rng=np.random.default_rng(seed=rng.integers(0, 1000, 1))
     )
     model.agents.add(agent)
 
@@ -136,11 +127,31 @@ print(f"  Steps: {N_STEPS}")
 print(f"  Debug level: {DEBUG_LEVEL}")
 print(f"  Seed: {SEED}")
 
+# Run the model
 model.run(N_STEPS)
 
 print("\n" + "="*80)
 print("SIMULATION COMPLETE")
 print("="*80)
+
+
+
+if DEBUG_LEVEL != 'none':
+    print(f"\nCollected debug data for {len(model.data_collector.step_data)} steps")
+    
+    agent_num = 2
+    agent_opinions = []
+    for step_data in model.data_collector.step_data:
+        for agent_data in step_data:    
+            if agent_data.agent_id == agent_num:
+                agent_opinions.append(agent_data.opinions_after)
+                break
+    
+    if agent_opinions:
+        print(f"\nAgent {agent_num} opinion trajectory on topic 0:")
+        for step, opinions in enumerate(agent_opinions):
+            if opinions:
+                print(f"  Step {step}: {opinions[0][1]:+.4f}")
                 
 bipolarization = calculate_bipolarization(model, 0)
 print(f'FINAL BIPOLALIZATION: {bipolarization}')
@@ -157,7 +168,8 @@ plot_opinion_trajectories(
     save_path=output_path,
 )
 
-plot_all_topics(model.data_collector,
-                N_STATIC_TOPICS)
-
+plot_all_topics(
+    model.data_collector,
+    n_topics = N_STATIC_TOPICS
+   )
 # %%

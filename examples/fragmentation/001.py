@@ -8,24 +8,24 @@ import numpy as np
 from  vector_model import *
 from analysis import *
 
-N_DIMS = 2             
-N_DYN_VECS = 3          
-N_PERS_VECS = 0          
+N_DIMS = 3         
+N_DYN_VECS = 3         
+N_PERS_VECS = 0
 
-N_STATIC_TOPICS = 1 
+N_STATIC_TOPICS = 3
 N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
 N_AGENTS = 50
 
-EPSILON_T_OP = 0.1
-EPSILON_R_OP = 0.9
+EPSILON_T_OP = 0.15
+EPSILON_R_OP = 0.85
 EPSILON_T_VEC = 0.1
 EPSILON_R_VEC = 0.9
-LAMBDA_PARAM = 0.1
+LAMBDA_PARAM = 0.15
 
-MESSAGE_RATE = 1.5  
+MESSAGE_RATE = 1.0
 MAX_TARGETS = 4          
 
 N_STEPS = 500
@@ -40,7 +40,7 @@ PRODUCER_METHODS: List[MessageProducer.PRODUCER_METHODS] = ['opinionated']
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 1
+SEED = 3
 
 rng = np.random.default_rng(SEED)
 
@@ -168,8 +168,8 @@ plot_opinion_trajectories(
     save_path=output_path,
 )
 
-#plot_all_topics(
-#    model.data_collector,
-#    n_topics=N_STATIC_TOPICS + N_DYNAMIC_TOPICS
-#    )
+plot_all_topics(
+    model.data_collector,
+    n_topics = N_STATIC_TOPICS
+   )
 # %%

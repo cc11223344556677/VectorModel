@@ -11,9 +11,9 @@ from agent_profiles import *
 
 AGENT_TYPE = 'test'
 
-N_DIMS = 4            
-N_DYN_VECS = 4         
-N_PERS_VECS = 4     
+N_DIMS = 10           
+N_DYN_VECS = 10       
+N_PERS_VECS = 2    
 
 N_STATIC_TOPICS = 1 
 N_DYNAMIC_TOPICS = 10
@@ -27,16 +27,16 @@ VECTOR_ASSIMILATIVE_METHOD = 'closest',
 OPINION_REPULSIVE_METHOD = 'matched',
 VECTOR_REPULSTIVE_METHOD = 'matched',
 
-EPSILON_T_OP = 0.4
-EPSILON_R_OP = 0.9
-EPSILON_T_VEC = 0.4
-EPSILON_R_VEC = 0.9
+EPSILON_T_OP = 0.2
+EPSILON_R_OP = 0.7
+EPSILON_T_VEC = 0.2
+EPSILON_R_VEC = 0.7
 LAMBDA_PARAM = 0.1
 
 MESSAGE_RATE = 1.0
 MAX_TARGETS = 4          
 
-N_STEPS = 250
+N_STEPS = 500
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
 MAX_MESSAGES_SELECTED = 20
@@ -88,7 +88,7 @@ model = VectorModel(
     data_collector=DATA_COLLECTOR,
 )
 
-N_STRATEGIC_AGENTS = 5
+N_STRATEGIC_AGENTS = 10
 for _ in range(N_STRATEGIC_AGENTS):
     strategic_agent = create_strategic_agent(model,
                   N_DIMS,
@@ -106,8 +106,10 @@ for _ in range(N_STRATEGIC_AGENTS):
                   )
     model.agents.add(strategic_agent)
 
-N_LURKERS = 40
-for _ in range(N_LURKERS):
+N_LURKERS = 80
+lurkers_count = 0
+while lurkers_count < N_LURKERS:
+#for _ in range(N_LURKERS):
     lurker = create_lurker(model,
                   N_DIMS,
                   N_DYN_VECS,
@@ -121,9 +123,16 @@ for _ in range(N_LURKERS):
                   N_MAX_MESSAGES,
                   rng
                   )
-    model.agents.add(lurker)
     
-N_COMMENTERS = 5
+    opinion = lurker.calculate_opinion(model.topic_space.get_topic(0))
+    
+    if opinion < 0.4 or opinion > 0.6:
+        model.deregister_agent(lurker)
+    else:
+        model.agents.add(lurker)
+        lurkers_count += 1
+    
+N_COMMENTERS = 10
 for _ in range(N_COMMENTERS):
     commenter = create_commenter(model,
                   N_DIMS,

@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from itertools import product
 from pathlib import Path
 import numpy as np
@@ -123,7 +123,7 @@ def main():
     
     results = []
     
-    with ThreadPoolExecutor(max_workers=12) as executor:
+    with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_params = {executor.submit(run_model, params): params for params in param_grid}
         
         for i, future in enumerate(as_completed(future_to_params), 1):
