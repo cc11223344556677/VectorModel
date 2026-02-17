@@ -3,9 +3,10 @@ import sys
 import mesa
 from mesa.agent import AgentSet
 import numpy as np
-from typing import Any, Callable, Dict, Tuple, List, Literal
+from typing import Callable, Dict, Tuple, List, Literal
 from collections import deque
 from typing import List, Tuple, get_args
+from analysis import DataCollector
 
 SIMILARITY_METHODS = Literal['cosine', 'tanh']
 
@@ -226,7 +227,8 @@ class MessageSelector:
         return message_space
     
     def select_randomly(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        return list(self.rng.choice(np.asarray(message_space), min(self.max_messages, len(message_space)) , replace=False)) # type: ignore
+        assert self.max_messages #handled by init logic
+        return list(self.rng.choice(np.asarray(message_space), min(self.max_messages, len(message_space)) , replace=False))
     
     def select_directly(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
         messages: List[Message] = []
@@ -338,10 +340,10 @@ class OpinionUpdater():
                  ):
         self.n_dims = n_dims
         self.n_vecs = n_vecs
-        self.opinion_assimilative_method = opinion_assimilative_method
-        self.vector_assimilative_method = vector_assimilative_method
-        self.opinion_repulsive_method = opinion_repulsive_method
-        self.vector_repulsive_method = vector_repulsive_method
+        self.opinion_assimilative_method: OpinionUpdater.OPINION_METHODS  = opinion_assimilative_method
+        self.vector_assimilative_method: OpinionUpdater.VECTOR_METHODS = vector_assimilative_method
+        self.opinion_repulsive_method: OpinionUpdater.OPINION_METHODS = opinion_repulsive_method
+        self.vector_repulsive_method: OpinionUpdater.VECTOR_METHODS = vector_repulsive_method
         match similarity_method:
             case 'cosine':
                 self.calculate_similarity = cosine_similarity
@@ -408,12 +410,12 @@ class OpinionUpdater():
                 target = topic.vector * signed
 
                 if opinion_diff < self.epsilon_T_op:
-                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_assimilative_method) # type: ignore
+                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_assimilative_method)
                     if best_index is not None:
                         update[best_index] += (target - agent.dyn_vecs[best_index]) * topic.activation
 
                 elif opinion_diff > self.epsilon_R_op:
-                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_repulsive_method) # type: ignore
+                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_repulsive_method)
                     if best_index is not None:
                         update[best_index] -= (target - agent.dyn_vecs[best_index]) * topic.activation
 
@@ -429,22 +431,27 @@ class OpinionUpdater():
             if not message.dyn_vecs:
                 continue
 
+            #TODO: extract into separate function, this is gross
             for vec_id, dyn_vec in message.dyn_vecs:
-
                 if self.vector_assimilative_method == 'matched':
                     similarity = self.calculate_similarity(dyn_vec, agent.dyn_vecs[vec_id])
                     if 1 - similarity < self.epsilon_T_vec:
                         update[vec_id] += dyn_vec - agent.dyn_vecs[vec_id]
-                    elif similarity > self.epsilon_R_vec:
-                        update[vec_id] -= dyn_vec - agent.dyn_vecs[vec_id]
                 else:
-                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_assimilative_method) # type: ignore
+                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_assimilative_method)
                     if best_index is not None and 1 - best_similarity < self.epsilon_T_vec:
                         update[best_index] += dyn_vec - agent.dyn_vecs[best_index]
                         
-                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_repulsive_method) # type: ignore
+                if self.vector_repulsive_method == 'matched':
+                    similarity = self.calculate_similarity(dyn_vec, agent.dyn_vecs[vec_id])
+                    if similarity > self.epsilon_R_vec:
+                        update[vec_id] -= dyn_vec - agent.dyn_vecs[vec_id]
+                else:
+                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_repulsive_method)
                     if best_index is not None and best_similarity > self.epsilon_R_vec:
                         update[best_index] -= dyn_vec - agent.dyn_vecs[best_index]
+                        
+                
 
 
 
@@ -685,7 +692,7 @@ class VectorAgent(mesa.Agent["VectorModel"]):
                  rng: np.random.Generator | None = None):
         self.model: VectorModel
         self.unique_id: int
-        super().__init__(model) # type: ignore
+        super().__init__(model) # type: ignore , mesa's fault
         
         self.n_dims = n_dims
         self.n_dyn_vecs = n_dyn_vecs
@@ -736,6 +743,8 @@ class VectorAgent(mesa.Agent["VectorModel"]):
         
         self.message_history.append(messages_received)
         
+        opinions_before = []
+        dyn_vecs_before = []
         if self.model.data_collector:
             opinions_before = [(i, self.calculate_opinion(topic)) 
                              for i, topic in enumerate(self.model.topic_space.get_all_topics())]
@@ -760,9 +769,9 @@ class VectorAgent(mesa.Agent["VectorModel"]):
                 agent_type=self.agent_type,
                 messages_received=messages_received,
                 messages_sent=messages_sent,
-                opinions_before=opinions_before, # type: ignore
+                opinions_before=opinions_before,
                 opinions_after=opinions_after,
-                dyn_vecs_before=dyn_vecs_before, # type: ignore
+                dyn_vecs_before=dyn_vecs_before, 
                 dyn_vecs_after=dyn_vecs_after
             )
 
@@ -776,7 +785,7 @@ class VectorModel(mesa.Model["VectorAgent"]):
                  n_dyn_vecs: int,
                  n_pers_vecs: int,
                  similarity_method: str,
-                 data_collector: Any = None):
+                 data_collector: "DataCollector | None" = None):
         self.agents: AgentSet[VectorAgent]
         super().__init__()
         
@@ -791,7 +800,7 @@ class VectorModel(mesa.Model["VectorAgent"]):
         
         self.message_space: List[Message] = []
         
-        self.data_collector = data_collector # type: ignore
+        self.data_collector = data_collector
         
         self.current_step = 0
     
@@ -800,7 +809,7 @@ class VectorModel(mesa.Model["VectorAgent"]):
             self.data_collector.start_step(self.current_step)
         
         self.topic_space.step()
-        self.agents.do("step")   # type: ignore
+        self.agents.do("step") #type: ignore , mesa's fault
         
         if self.data_collector:
             self.data_collector.end_step(self)
