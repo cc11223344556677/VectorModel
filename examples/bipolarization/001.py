@@ -22,10 +22,10 @@ TOPIC_REPLACE_THRESHOLD = 0.1
 
 N_AGENTS = 100
 
-OPINION_ASSIMILATIVE_METHOD = 'closest',
-VECTOR_ASSIMILATIVE_METHOD = 'closest',
-OPINION_REPULSIVE_METHOD = 'furthest',
-VECTOR_REPULSTIVE_METHOD = 'furthest',
+OPINION_ASSIMILATIVE_METHOD = 'closest'
+VECTOR_ASSIMILATIVE_METHOD = 'closest'
+OPINION_REPULSIVE_METHOD = 'furthest'
+VECTOR_REPULSTIVE_METHOD = 'furthest'
 
 EPSILON_T_OP = 0.1
 EPSILON_R_OP = 0.2
@@ -210,7 +210,7 @@ output_path = script_path.with_suffix(".jpg")
 plot_opinion_trajectories(
     model.data_collector, 
     topic_id=0,
-    save_path=output_path,
+    save_path=str(output_path),
 )
 
 #plot_all_topics(

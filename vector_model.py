@@ -1,13 +1,11 @@
 from __future__ import annotations
 import sys
 import mesa
+from mesa.agent import AgentSet
 import numpy as np
-from typing import Tuple, List, Literal
+from typing import Any, Callable, Dict, Tuple, List, Literal
 from collections import deque
 from typing import List, Tuple, get_args
-import mesa
-import numpy as np
-from collections import deque
 
 SIMILARITY_METHODS = Literal['cosine', 'tanh']
 
@@ -22,7 +20,7 @@ def dimensionality_adjusted_similarity(vec1: np.ndarray, vec2: np.ndarray, ) -> 
     return (np.tanh(raw / expected_std) + 1) / 2
 
 class Topic:
-    def __init__(self, topic_id: int, vector: np.ndarray, is_static: bool = False, activation = 1.0):
+    def __init__(self, topic_id: int, vector: np.ndarray, is_static: bool = False, activation: float | np.ndarray = 1.0):
         self.topic_id = topic_id
         self.vector = vector
         self.is_static = is_static
@@ -41,7 +39,7 @@ class TopicSpace:
                  n_dynamic_topics: int,
                  decay_rate: float = 0.95,
                  replacement_threshold: float = 0.1,
-                 rng: np.random.Generator = None
+                 rng: np.random.Generator | None = None
                  ):
         self.n_dims = n_dims
         self.n_static_topics = n_static_topics
@@ -50,7 +48,7 @@ class TopicSpace:
         self.replacement_threshold = replacement_threshold
         self.rng = rng or np.random.default_rng()
         
-        self.topics = []
+        self.topics: List[Topic] = []
         
         for i in range(n_static_topics):
             vec = self.rng.standard_normal(n_dims)
@@ -96,10 +94,10 @@ class Message():
     """
     def __init__(self, 
                  sender_id: int, 
-                 opinions: List[Tuple[int, float]] = None, 
-                 dyn_vecs: List[Tuple[int, np.ndarray]] = None,
-                 pers_vecs: List[Tuple[int, np.ndarray]] = None, 
-                 target_ids: List[int] = None,
+                 opinions: List[Tuple[int, float]] | None = None, 
+                 dyn_vecs: List[Tuple[int, np.ndarray]] | None = None,
+                 pers_vecs: List[Tuple[int, np.ndarray]] | None = None, 
+                 target_ids: List[int] | None = None,
                  ):
         self.sender_id = sender_id
         self.opinions = opinions
@@ -128,8 +126,8 @@ class MessageSelector:
         similarity_method: SIMILARITY_METHODS, 
         max_messages_selected: int | None = None,
         rng: np.random.Generator | None = None,
-        opinion_similarity_threshold=None,
-        vector_similarity_threshold=None,
+        opinion_similarity_threshold: float | None =None,
+        vector_similarity_threshold: float | None =None,
     ):
         if max_messages_selected is not None and rng is None:
             raise ValueError("max_messages was set but rng=None was passed")
@@ -138,7 +136,7 @@ class MessageSelector:
         if invalid:
             raise ValueError(f"Invalid methods passed: {invalid}")
 
-        self.selectors = []
+        self.selectors: List[Callable[[List[Message], VectorAgent], List[Message]]] = []
         
         match similarity_method:
             case 'cosine':
@@ -168,7 +166,7 @@ class MessageSelector:
                             "method='select_from_similar_opinions' "
                             "requires opinion_similarity_threshold"
                         )
-                    self.opinion_similarity_threshold = opinion_similarity_threshold
+                    self.opinion_similarity_threshold: float = opinion_similarity_threshold
                     self.selectors.append(self.select_from_similar_opinions)
 
                 case 'select_from_similar_personalities_matched':
@@ -176,7 +174,7 @@ class MessageSelector:
                         raise ValueError(
                             f"method='{m}' requires vector_similarity_threshold"
                         )
-                    self.vector_similarity_threshold = vector_similarity_threshold
+                    self.vector_similarity_threshold: float = vector_similarity_threshold
                     self.selectors.append(self.select_from_similar_personalities_matched)
                     
                 case 'select_from_similar_personalities_unmatched':
@@ -184,27 +182,27 @@ class MessageSelector:
                         raise ValueError(
                             f"method='{m}' requires vector_similarity_threshold"
                         )
-                    self.vector_similarity_threshold = vector_similarity_threshold
+                    self.vector_similarity_threshold: float = vector_similarity_threshold
                     self.selectors.append(self.select_from_similar_personalities_unmatched)
 
                 case 'select_from_similar_dyn_vecs_matched':
-                    if opinion_similarity_threshold is None:
+                    if vector_similarity_threshold is None:
                         raise ValueError(
                             f"method='{m}' requires vector_similarity_threshold"
                         )
-                    self.vector_similarity_threshold = vector_similarity_threshold
+                    self.vector_similarity_threshold: float = vector_similarity_threshold
                     self.selectors.append(self.select_from_similar_dyn_vecs_matched)
                     
                 case 'select_from_similar_dyn_vecs_unmatched':
-                    if opinion_similarity_threshold is None:
+                    if vector_similarity_threshold is None:
                         raise ValueError(
                             f"method='{m}' requires vector_similarity_threshold"
                         )
-                    self.vector_similarity_threshold = vector_similarity_threshold
+                    self.vector_similarity_threshold: float = vector_similarity_threshold
                     self.selectors.append(self.select_from_similar_dyn_vecs_unmatched)
 
-        self.max_messages = max_messages_selected
-        self.rng = rng
+        self.max_messages: int | None = max_messages_selected
+        self.rng: np.random.Generator = rng or np.random.default_rng()
 
     def select_messages(
         self,
@@ -217,7 +215,7 @@ class MessageSelector:
             messages.extend(selector(message_space, agent))
 
         if self.max_messages is not None and len(messages) > self.max_messages:
-            return list(self.rng.choice(messages, self.max_messages, replace=False))
+            return list(self.rng.choice(np.asarray(messages), self.max_messages, replace=False))
 
         return messages
     
@@ -228,13 +226,10 @@ class MessageSelector:
         return message_space
     
     def select_randomly(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        if self.rng is None:
-            raise ValueError("To select randomly, a  random number generator (rng) must be set")
-        
-        return self.rng.choice(message_space, min(self.max_messages, len(message_space)) , replace=False)
+        return list(self.rng.choice(np.asarray(message_space), min(self.max_messages, len(message_space)) , replace=False)) # type: ignore
     
     def select_directly(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         for message in message_space:
             if message.target_ids and agent.unique_id in message.target_ids:
                 messages.append(message)
@@ -242,7 +237,7 @@ class MessageSelector:
         return messages
     
     def select_from_similar_opinions(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         
         for message in message_space:
             if not message.opinions:
@@ -255,7 +250,7 @@ class MessageSelector:
         return messages
                 
     def select_from_similar_personalities_matched(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         
         for message in message_space:
             if not message.pers_vecs: 
@@ -269,7 +264,7 @@ class MessageSelector:
         
         
     def select_from_similar_personalities_unmatched(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         
         for message in message_space:
             if not message.pers_vecs:
@@ -284,7 +279,7 @@ class MessageSelector:
         return messages
     
     def select_from_similar_dyn_vecs_matched(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         
         for message in message_space:
             if not message.dyn_vecs: 
@@ -298,7 +293,7 @@ class MessageSelector:
         
         
     def select_from_similar_dyn_vecs_unmatched(self, message_space: List[Message], agent: VectorAgent) -> List[Message]:
-        messages = []
+        messages: List[Message] = []
         
         for message in message_space:
             if not message.dyn_vecs:
@@ -328,18 +323,18 @@ class OpinionUpdater():
     VECTOR_METHODS = Literal['closest', 'furthest', 'matched']
 
     def __init__(self,
-                 n_dims,
-                 n_vecs,
+                 n_dims: int,
+                 n_vecs: int,
                  opinion_assimilative_method: OPINION_METHODS,
                  vector_assimilative_method: VECTOR_METHODS,
                  opinion_repulsive_method: OPINION_METHODS,
                  vector_repulsive_method: VECTOR_METHODS,
                  similarity_method: SIMILARITY_METHODS,
-                 epsilon_T_op,
-                 epsilon_R_op,
-                 epsilon_T_vec,
-                 epsilon_R_vec,
-                 lambda_param,
+                 epsilon_T_op: float,
+                 epsilon_R_op: float,
+                 epsilon_T_vec: float,
+                 epsilon_R_vec: float,
+                 lambda_param: float,
                  ):
         self.n_dims = n_dims
         self.n_vecs = n_vecs
@@ -382,10 +377,10 @@ class OpinionUpdater():
                                 ) -> Tuple[int | None, float]:
         if method == 'closest':
             best_similarity = -sys.float_info.max
-            is_better = lambda similarity, best: similarity > best
+            is_better: Callable[[float, float], bool] = lambda similarity, best: similarity > best
         else:  # furthest
             best_similarity = sys.float_info.max
-            is_better = lambda similarity, best: similarity < best
+            is_better: Callable[[float, float], bool] = lambda similarity, best: similarity < best
 
         best_index = None
         for idx, vec in enumerate(vecs):
@@ -413,12 +408,12 @@ class OpinionUpdater():
                 target = topic.vector * signed
 
                 if opinion_diff < self.epsilon_T_op:
-                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_assimilative_method)
+                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_assimilative_method) # type: ignore
                     if best_index is not None:
                         update[best_index] += (target - agent.dyn_vecs[best_index]) * topic.activation
 
                 elif opinion_diff > self.epsilon_R_op:
-                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_repulsive_method)
+                    best_index, _ = self._find_extreme_vec_index(agent.dyn_vecs, topic.vector, self.opinion_repulsive_method) # type: ignore
                     if best_index is not None:
                         update[best_index] -= (target - agent.dyn_vecs[best_index]) * topic.activation
 
@@ -443,11 +438,11 @@ class OpinionUpdater():
                     elif similarity > self.epsilon_R_vec:
                         update[vec_id] -= dyn_vec - agent.dyn_vecs[vec_id]
                 else:
-                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_assimilative_method)
+                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_assimilative_method) # type: ignore
                     if best_index is not None and 1 - best_similarity < self.epsilon_T_vec:
                         update[best_index] += dyn_vec - agent.dyn_vecs[best_index]
                         
-                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_repulsive_method)
+                    best_index, best_similarity = self._find_extreme_vec_index(agent.dyn_vecs, dyn_vec, self.vector_repulsive_method) # type: ignore
                     if best_index is not None and best_similarity > self.epsilon_R_vec:
                         update[best_index] -= dyn_vec - agent.dyn_vecs[best_index]
 
@@ -472,7 +467,7 @@ class MessageProducer:
                  opinion_threshold: float = 0.7,
                  max_targets: int = 1,
                  n_max_messages: int = 5,
-                 rng: np.random.Generator = None,
+                 rng: np.random.Generator | None = None,
                  include_opinions: bool = True,
                  include_dyn_vecs: bool = True,
                  include_pers_vecs: bool = True,
@@ -501,7 +496,7 @@ class MessageProducer:
         self.n_pers_vecs_per_message = n_pers_vecs_per_message
         
     def set_methods(self, methods: List[PRODUCER_METHODS]):
-        self.methods = []
+        self.methods: List[Callable[[VectorAgent], List[Message]]] = []
         
         for method in methods:
             match method:
@@ -516,8 +511,8 @@ class MessageProducer:
                 case 'random_targets':
                     self.methods.append(self.random_targets)
                 
-    def produce(self, agent) -> List[Message]:
-        messages = []
+    def produce(self, agent: VectorAgent) -> List[Message]:
+        messages: List[Message] = []
         
         for method in self.methods:
             messages.extend(method(agent))
@@ -528,14 +523,14 @@ class MessageProducer:
         
         return messages
     
-    def _create_message(self, agent: VectorAgent, target_ids: List[int] = None) -> Message:
+    def _create_message(self, agent: VectorAgent, target_ids: List[int] | None = None) -> Message:
         opinions = None
         dyn_vecs = None
         pers_vecs = None
         
         if self.include_opinions:
             all_topics = list(range(len(agent.model.topic_space.topics)))
-            if self.n_topics_per_message is not None:
+            if self.n_topics_per_message:
                 topic_ids = self.rng.choice(all_topics, 
                                           min(self.n_topics_per_message, len(all_topics)), 
                                           replace=False)
@@ -547,7 +542,7 @@ class MessageProducer:
         
         if self.include_dyn_vecs:
             all_dyn_vecs = list(range(len(agent.dyn_vecs)))
-            if self.n_dyn_vecs_per_message is not None:
+            if self.n_dyn_vecs_per_message:
                 vec_ids = self.rng.choice(all_dyn_vecs,
                                          min(self.n_dyn_vecs_per_message, len(all_dyn_vecs)),
                                          replace=False)
@@ -557,7 +552,7 @@ class MessageProducer:
             
         if self.include_pers_vecs:
             all_pers_vecs = list(range(len(agent.pers_vecs)))
-            if self.n_pers_vecs_per_message is not None:
+            if self.n_pers_vecs_per_message:
                 vec_ids = self.rng.choice(all_pers_vecs,
                                          min(self.n_pers_vecs_per_message, len(all_pers_vecs)),
                                          replace=False)
@@ -573,9 +568,9 @@ class MessageProducer:
             target_ids=target_ids
         )
     
-    def reciprocal(self, agent) -> List[Message]:
+    def reciprocal(self, agent: VectorAgent) -> List[Message]:
         recent_messages = agent.message_history[-1] if agent.message_history else []
-        sender_counts = {}
+        sender_counts: Dict[int, int] = {}
         for msg in recent_messages:
             sender_counts[msg.sender_id] = sender_counts.get(msg.sender_id, 0) + 1
         
@@ -598,9 +593,9 @@ class MessageProducer:
         
         return []
     
-    def similar(self, agent) -> List[Message]:
+    def similar(self, agent: VectorAgent) -> List[Message]:
         recent_messages = agent.message_history[-1] if agent.message_history else []
-        similar_agents = []
+        similar_agents: List[int] = []
         
         for msg in recent_messages:
             if msg.pers_vecs:
@@ -618,9 +613,9 @@ class MessageProducer:
         
         return []
     
-    def dissimilar(self, agent) -> List[Message]:
+    def dissimilar(self, agent: VectorAgent) -> List[Message]:
         recent_messages = agent.message_history[-1] if agent.message_history else []
-        dissimilar_agents = []
+        dissimilar_agents: List[int] = []
         
         for msg in recent_messages:
             if msg.pers_vecs:
@@ -638,57 +633,59 @@ class MessageProducer:
         
         return []
     
-    def opinionated(self, agent) -> List[Message]:
-        strong_opinions = []
+    def opinionated(self, agent: VectorAgent) -> List[Message]:
+        strong_opinion_indices: List[int] = []
         for i, topic in enumerate(agent.model.topic_space.get_all_topics()):
             if abs(agent.calculate_opinion(topic)) > self.opinion_threshold:
-                strong_opinions.append(i)
+                strong_opinion_indices.append(i)
 
-        if not strong_opinions or self.rng.random() >= self.message_rate:
+        if not strong_opinion_indices or self.rng.random() >= self.message_rate:
             return []
 
-        all_agents = list(agent.model.agents)
+        all_agents: List[VectorAgent] = list(agent.model.agents)
         all_agents.remove(agent)
 
         if not all_agents:
             return []
 
         n_to_target = min(self.max_targets // len(self.methods), len(all_agents))
-        targets = self.rng.choice(all_agents, size=n_to_target, replace=False)
-        target_ids = [t.unique_id for t in targets]
+        targets: List[VectorAgent] = list(self.rng.choice(np.asarray(all_agents), size=n_to_target, replace=False))
+        target_ids: List[int] = [t.unique_id for t in targets]
 
         msg = self._create_message(agent, target_ids)
         if self.include_opinions and msg.opinions:
-            msg.opinions = [(tid, val) for tid, val in msg.opinions if tid in strong_opinions]
+            msg.opinions = [(tid, val) for tid, val in msg.opinions if tid in strong_opinion_indices]
 
         return [msg]
     
-    def random_targets(self, agent) -> List[Message]:
+    def random_targets(self, agent: VectorAgent) -> List[Message]:
         if self.rng.random() < self.message_rate:
             all_agents = list(agent.model.agents)
             all_agents.remove(agent)
             
             if all_agents:
                 n_to_target = min(self.max_targets // len(self.methods), len(all_agents))
-                targets = self.rng.choice(all_agents, size=n_to_target, replace=False)
-                target_ids = [t.unique_id for t in targets]
+                targets: List[VectorAgent] = list(self.rng.choice(np.asarray(all_agents), size=n_to_target, replace=False))
+                target_ids: List[int] = [t.unique_id for t in targets]
                 return [self._create_message(agent, target_ids)]
         
         return []
 
 #complete rewrite
-class VectorAgent(mesa.Agent):
+class VectorAgent(mesa.Agent["VectorModel"]):
     def __init__(self,
-                 model,
+                 model: VectorModel,
                  n_dims: int,
                  n_dyn_vecs: int,
                  n_pers_vecs: int,
-                 message_selector,
-                 message_producer,
-                 similarity_method: str = 'cosine',
+                 message_selector: MessageSelector,
+                 message_producer: MessageProducer,
+                 similarity_method: SIMILARITY_METHODS= 'cosine',
                  agent_type: str = 'default',
-                 rng: np.random.Generator = None):
-        super().__init__(model)
+                 rng: np.random.Generator | None = None):
+        self.model: VectorModel
+        self.unique_id: int
+        super().__init__(model) # type: ignore
         
         self.n_dims = n_dims
         self.n_dyn_vecs = n_dyn_vecs
@@ -702,13 +699,13 @@ class VectorAgent(mesa.Agent):
             case 'tanh':
                 self.calculate_similarity = dimensionality_adjusted_similarity
         
-        self.dyn_vecs = []
+        self.dyn_vecs: List[np.ndarray] = []
         for _ in range(n_dyn_vecs):
             vec = self._rng.standard_normal(n_dims)
             vec = vec / np.linalg.norm(vec)
             self.dyn_vecs.append(vec)
         
-        self.pers_vecs = []
+        self.pers_vecs: List[np.ndarray] = []
         for _ in range(n_pers_vecs):
             vec = self._rng.standard_normal(n_dims)
             vec = vec / np.linalg.norm(vec)
@@ -716,12 +713,12 @@ class VectorAgent(mesa.Agent):
         
         self.next_dyn_vecs = [v.copy() for v in self.dyn_vecs]
         
-        self.message_selector = message_selector
-        self.message_producer = message_producer
+        self.message_selector: MessageSelector = message_selector
+        self.message_producer: MessageProducer = message_producer
         
-        self.message_history: deque = deque(maxlen=5)
+        self.message_history: deque[List[Message]] = deque(maxlen=5)
         
-    def calculate_opinion(self, topic) -> float:
+    def calculate_opinion(self, topic: Topic) -> float:
         avg_vec = np.zeros(self.n_dims)
         for pers_vec in self.pers_vecs:
             avg_vec += pers_vec
@@ -763,23 +760,24 @@ class VectorAgent(mesa.Agent):
                 agent_type=self.agent_type,
                 messages_received=messages_received,
                 messages_sent=messages_sent,
-                opinions_before=opinions_before,
+                opinions_before=opinions_before, # type: ignore
                 opinions_after=opinions_after,
-                dyn_vecs_before=dyn_vecs_before,
+                dyn_vecs_before=dyn_vecs_before, # type: ignore
                 dyn_vecs_after=dyn_vecs_after
             )
 
 #complete rewrite, no grid
-class VectorModel(mesa.Model):
+class VectorModel(mesa.Model["VectorAgent"]):
     def __init__(self,
                  n_agents: int,
-                 topic_space,
-                 opinion_updater,
+                 topic_space: TopicSpace,
+                 opinion_updater: OpinionUpdater,
                  n_dims: int,
                  n_dyn_vecs: int,
                  n_pers_vecs: int,
                  similarity_method: str,
-                 data_collector=None):
+                 data_collector: Any = None):
+        self.agents: AgentSet[VectorAgent]
         super().__init__()
         
         self.n_agents = n_agents
@@ -788,12 +786,12 @@ class VectorModel(mesa.Model):
         self.n_pers_vecs = n_pers_vecs
         self.similarity_method = similarity_method
         
-        self.topic_space = topic_space
-        self.opinion_updater = opinion_updater
+        self.topic_space: TopicSpace = topic_space
+        self.opinion_updater: OpinionUpdater = opinion_updater
         
-        self.message_space = []
+        self.message_space: List[Message] = []
         
-        self.data_collector = data_collector
+        self.data_collector = data_collector # type: ignore
         
         self.current_step = 0
     
@@ -802,7 +800,7 @@ class VectorModel(mesa.Model):
             self.data_collector.start_step(self.current_step)
         
         self.topic_space.step()
-        self.agents.do("step")
+        self.agents.do("step")   # type: ignore
         
         if self.data_collector:
             self.data_collector.end_step(self)

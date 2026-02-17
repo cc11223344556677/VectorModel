@@ -12,7 +12,7 @@ AGENT_TYPE = 'test'
 
 N_DIMS = 3            
 N_DYN_VECS = 3          
-N_PERS_VECS = 3          
+N_PERS_VECS = 0      
 
 N_STATIC_TOPICS = 1
 N_DYNAMIC_TOPICS = 10
@@ -21,24 +21,24 @@ TOPIC_REPLACE_THRESHOLD = 0.1
 
 N_AGENTS = 50
 
-OPINION_ASSIMILATIVE_METHOD = 'closest',
-VECTOR_ASSIMILATIVE_METHOD = 'closest',
-OPINION_REPULSIVE_METHOD = 'furthest',
-VECTOR_REPULSTIVE_METHOD = 'furthest',
+OPINION_ASSIMILATIVE_METHOD = 'closest'
+VECTOR_ASSIMILATIVE_METHOD = 'closest'
+OPINION_REPULSIVE_METHOD = 'furthest'
+VECTOR_REPULSTIVE_METHOD = 'furthest'
 
-EPSILON_T_OP = 0.1
-EPSILON_R_OP = 0.2
-EPSILON_T_VEC = 0.1
-EPSILON_R_VEC = 0.2
+EPSILON_T_OP = 0.15
+EPSILON_R_OP = 0.75
+EPSILON_T_VEC = 0.15
+EPSILON_R_VEC = 0.75
 LAMBDA_PARAM = 0.1
 
 MESSAGE_RATE = 1.5  
 MAX_TARGETS = 4          
 
-N_STEPS = 500
+N_STEPS = 1000
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
-SELECTOR_METHODS = ['select_randomly']
+SELECTOR_METHODS: List[MessageSelector.ALLOWED_METHODS] = ['select_randomly']
 MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
@@ -154,7 +154,7 @@ output_path = script_path.with_suffix(".jpg")
 plot_opinion_trajectories(
     model.data_collector, 
     topic_id=0,
-    save_path=output_path,
+    save_path=str(output_path),
 )
 
 plot_all_topics(model.data_collector,

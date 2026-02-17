@@ -227,7 +227,7 @@ output_path = script_path.with_suffix(".jpg")
 plot_opinion_trajectories(
     model.data_collector, 
     topic_id=0,
-    save_path=output_path,
+    save_path=str(output_path),
 )
 
 #plot_all_topics(

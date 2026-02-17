@@ -31,7 +31,7 @@ MAX_TARGETS = 4
 N_STEPS = 500
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
-SELECTOR_METHODS = ['select_randomly']
+SELECTOR_METHODS: List[MessageSelector.ALLOWED_METHODS] = ['select_randomly']
 MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
@@ -165,7 +165,7 @@ output_path = script_path.with_suffix(".jpg")
 plot_opinion_trajectories(
     model.data_collector, 
     topic_id=0,
-    save_path=output_path,
+    save_path=str(output_path),
 )
 
 plot_all_topics(

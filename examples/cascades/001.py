@@ -8,30 +8,30 @@ import numpy as np
 from  vector_model import *
 from analysis import *
 
-N_DIMS = 3         
-N_DYN_VECS = 3         
+N_DIMS = 3 
+N_DYN_VECS = 3
 N_PERS_VECS = 0
 
-N_STATIC_TOPICS = 3
+N_STATIC_TOPICS = 1
 N_DYNAMIC_TOPICS = 10
 TOPIC_DECAY_RATE = 0.95 
 TOPIC_REPLACE_THRESHOLD = 0.1  
 
 N_AGENTS = 50
 
-EPSILON_T_OP = 0.2
-EPSILON_R_OP = 0.8
-EPSILON_T_VEC = 0.2
-EPSILON_R_VEC = 0.8
+EPSILON_T_OP = 0.1
+EPSILON_R_OP = 0.9
+EPSILON_T_VEC = 0.1
+EPSILON_R_VEC = 0.9
 LAMBDA_PARAM = 0.15
 
 MESSAGE_RATE = 1.0
-MAX_TARGETS = 4          
+MAX_TARGETS = 1    
 
 N_STEPS = 250
 SIMILARITY_METHOD: SIMILARITY_METHODS = 'tanh'
 
-SELECTOR_METHODS = ['select_randomly']
+SELECTOR_METHODS: List[MessageSelector.ALLOWED_METHODS] = ['select_all']
 MAX_MESSAGES_SELECTED = 10
 OPINION_SIMILARITY_THRESHOLD = 0.4
 VECTOR_SIMILARITY_THRESHOLD = 0.4
@@ -40,7 +40,7 @@ PRODUCER_METHODS: List[MessageProducer.PRODUCER_METHODS] = ['opinionated']
 
 DEBUG_LEVEL: DEBUG_LEVELS = 'summary'
 
-SEED = 4
+SEED = 0
 
 rng = np.random.default_rng(SEED)
 
@@ -165,7 +165,7 @@ output_path = script_path.with_suffix(".jpg")
 plot_opinion_trajectories(
     model.data_collector, 
     topic_id=0,
-    save_path=output_path,
+    save_path=str(output_path),
 )
 
 plot_all_topics(
