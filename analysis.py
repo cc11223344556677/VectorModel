@@ -6,8 +6,6 @@ from matplotlib.lines import Line2D
 from typing import Dict, Optional
 import numpy as np
 
-from vector_model import Message, VectorModel
-
 DEBUG_LEVELS = Literal['none', 'summary', 'agent_stats', 'detailed']
 
 @dataclass
@@ -15,8 +13,8 @@ class AgentData:
     step: int
     agent_id: int
     agent_type: str
-    messages_received: List[Message] = field(default_factory=list)
-    messages_sent: List[Message] = field(default_factory=list)
+    messages_received: List["Message"] = field(default_factory=list)
+    messages_sent: List["Message"] = field(default_factory=list)
     opinions_before: List[tuple[int, float]] = field(default_factory=list)
     opinions_after: List[tuple[int, float]] = field(default_factory=list)
     dyn_vecs_before: List[np.ndarray] = field(default_factory=list)
